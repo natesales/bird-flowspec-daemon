@@ -159,6 +159,6 @@ func main() {
 			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
 		}
 
-		log.Println(localSessionAttrs, localMatchAttrs)
+		log.Printf("%+v %+v\n", localSessionAttrs, localMatchAttrs)
 	}
 }
