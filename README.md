@@ -1,5 +1,7 @@
 # BIRD2 BGP FlowSpec router PoC
 
+Proof of concept for using BIRD+linux to act upon BGP flowspec routes. 
+
 ### Setup
 
 The compose file and accompanying Dockerfile should be all you need to get started with a basic 2 router lab network. Running `docker-compose up` in the project directory will bring up 2 containers running BIRD: the controller to send flowspec routes and the router to communicate with the flowspecd process for acting upon the received routes.
