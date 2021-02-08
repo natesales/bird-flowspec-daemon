@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -160,6 +159,6 @@ func main() {
 			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
 		}
 
-		fmt.Println(localSessionAttrs, localMatchAttrs)
+		log.Println(localSessionAttrs, localMatchAttrs)
 	}
 }
