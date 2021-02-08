@@ -113,6 +113,29 @@ func parseMatchAttrs(input string) (error, matchAttrs) {
 	return nil, outputMatchAttrs // nil error
 }
 
+// parseSessionAttrs parses the BIRD session attributes
+func parseSessionAttrs(input string) (sessionAttrs, error) {
+	var outputSessionAttrs = sessionAttrs{}
+
+	parts := strings.Split(input, " ")
+	if len(parts) != 4 {
+		return sessionAttrs{}, errors.New("invalid token length")
+	}
+
+	// Set string values
+	outputSessionAttrs.SessionName = parts[0]
+	outputSessionAttrs.ImportTime = parts[1]
+
+	ip := net.ParseIP(parts[3])
+	if ip == nil {
+		return sessionAttrs{}, errors.New("invalid neighbor IP address")
+	}
+
+	outputSessionAttrs.NeighborAddress = ip
+
+	return outputSessionAttrs, nil // nil error
+}
+
 func main() {
 	flowRoutes := ""
 	for _, line := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "\n") {
