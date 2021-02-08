@@ -11,16 +11,17 @@ import (
 
 var birdSocket = "/run/bird/bird.ctl"
 
-// flowRoute stores a single flowspec route
-type flowRoute struct {
-	AddressFamily uint8
-}
-
 type matchAttrs struct {
 	Source          net.IPNet
 	Destination     net.IPNet
 	SourcePort      uint16
 	DestinationPort uint16
+}
+
+type sessionAttrs struct {
+	SessionName     string
+	NeighborAddress net.IP
+	ImportTime      string
 }
 
 // Buffered io Reader
