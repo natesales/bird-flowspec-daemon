@@ -1,0 +1,22 @@
+version: "3.3"
+services:
+  controller:
+    build: .
+    volumes:
+      - ./controller-bird.conf:/etc/bird/bird.conf
+    networks:
+      peerbr:
+        ipv4_address: 10.5.0.2
+  router:
+    build: .
+    volumes:
+      - ./router-bird.conf:/etc/bird/bird.conf
+    networks:
+      peerbr:
+        ipv4_address: 10.5.0.3
+networks:
+  peerbr:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.5.0.0/24
