@@ -74,7 +74,7 @@ func inclusiveMatch(input string, leftDelimiter string, rightDelimiter string) s
 	return strings.Split(leftSide[1], rightDelimiter)[0]
 }
 
-func parseMatchAttrs(input string) matchAttrs {
+func parseMatchAttrs(input string) (error, matchAttrs) {
 	var outputMatchAttrs = matchAttrs{}
 	for _, kvPair := range strings.Split(input, ";") {
 		parts := strings.Split(strings.TrimRight(strings.TrimLeft(kvPair, " "), " "), " ")
@@ -85,32 +85,32 @@ func parseMatchAttrs(input string) matchAttrs {
 			case "src":
 				_, localSource, err := net.ParseCIDR(value)
 				if err != nil {
-					break
+					return errors.New("unable to parse source prefix"), matchAttrs{}
 				}
 				outputMatchAttrs.Source = *localSource
 			case "dst":
 				_, localDestination, err := net.ParseCIDR(value)
 				if err != nil {
-					break
+					return errors.New("unable to parse destination prefix"), matchAttrs{}
 				}
 				outputMatchAttrs.Destination = *localDestination
 			case "sport":
 				localSPort, err := strconv.Atoi(value)
 				if err != nil {
-					break
+					return errors.New("unable to parse source port"), matchAttrs{}
 				}
 				outputMatchAttrs.SourcePort = uint16(localSPort)
 			case "dport":
 				localDPort, err := strconv.Atoi(value)
 				if err != nil {
-					break
+					return errors.New("unable to parse destination port"), matchAttrs{}
 				}
 				outputMatchAttrs.DestinationPort = uint16(localDPort)
 			}
 		}
 	}
 
-	return outputMatchAttrs
+	return nil, outputMatchAttrs // nil error
 }
 
 func main() {
