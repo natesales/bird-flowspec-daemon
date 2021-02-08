@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 )
 
@@ -12,7 +13,10 @@ var birdSocket = "/run/bird/bird.ctl"
 
 // flowRoute stores a single flowspec route
 type flowRoute struct {
-	AddressFamily   uint8
+	AddressFamily uint8
+}
+
+type matchAttrs struct {
 	Source          net.IPNet
 	Destination     net.IPNet
 	SourcePort      uint16
@@ -61,11 +65,68 @@ func birdCommand(command string) string {
 	return bufferedRead(conn)
 }
 
+func inclusiveMatch(input string, leftDelimiter string, rightDelimiter string) string {
+	leftSide := strings.Split(input, leftDelimiter)
+	if len(leftSide) < 2 {
+		return ""
+	}
+
+	return strings.Split(leftSide[1], rightDelimiter)[0]
+}
+
+func parseMatchAttrs(input string) matchAttrs {
+	var outputMatchAttrs = matchAttrs{}
+	for _, kvPair := range strings.Split(input, ";") {
+		parts := strings.Split(strings.TrimRight(strings.TrimLeft(kvPair, " "), " "), " ")
+		if len(parts) > 1 {
+			key := strings.TrimSpace(strings.Join(parts[:len(parts)-1], "_"))
+			value := strings.TrimSpace(parts[len(parts)-1])
+			switch key {
+			case "src":
+				_, localSource, err := net.ParseCIDR(value)
+				if err != nil {
+					break
+				}
+				outputMatchAttrs.Source = *localSource
+			case "dst":
+				_, localDestination, err := net.ParseCIDR(value)
+				if err != nil {
+					break
+				}
+				outputMatchAttrs.Destination = *localDestination
+			case "sport":
+				localSPort, err := strconv.Atoi(value)
+				if err != nil {
+					break
+				}
+				outputMatchAttrs.SourcePort = uint16(localSPort)
+			case "dport":
+				localDPort, err := strconv.Atoi(value)
+				if err != nil {
+					break
+				}
+				outputMatchAttrs.DestinationPort = uint16(localDPort)
+			}
+		}
+	}
+
+	return outputMatchAttrs
+}
+
 func main() {
-	flowRoutes := birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all")
-	routes := strings.Split(flowRoutes, "{ ")
-	for _, route := range routes {
-		fmt.Println(route)
-		fmt.Println("----")
+	flowRoutes := ""
+	for _, line := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "\n") {
+		if strings.Contains(line, "flow4") || strings.Contains(line, "flow6") {
+			flowRoutes += line + "|"
+		}
+	}
+
+	for _, route := range strings.Split(flowRoutes, "|") {
+		matchAttrs := inclusiveMatch(route, "{ ", " }")
+		//sessionAttrs := inclusiveMatch(route, "[", "]")
+		//fmt.Println(matchAttrs, sessionAttrs)
+		//fmt.Println(route)
+		//fmt.Println("----")
+		fmt.Printf("%+v\n", parseMatchAttrs(matchAttrs))
 	}
 }
