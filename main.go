@@ -10,6 +10,15 @@ import (
 
 var birdSocket = "/run/bird/bird.ctl"
 
+// flowRoute stores a single flowspec route
+type flowRoute struct {
+	AddressFamily   uint8
+	Source          net.IPNet
+	Destination     net.IPNet
+	SourcePort      uint16
+	DestinationPort uint16
+}
+
 // Buffered io Reader
 func bufferedRead(reader io.Reader) string {
 	log.Println("Reading from BIRD socket")
