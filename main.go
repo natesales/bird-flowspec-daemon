@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -75,7 +76,7 @@ func inclusiveMatch(input string, leftDelimiter string, rightDelimiter string) s
 	return strings.Split(leftSide[1], rightDelimiter)[0]
 }
 
-func parseMatchAttrs(input string) (error, matchAttrs) {
+func parseMatchAttrs(input string) (matchAttrs, error) {
 	var outputMatchAttrs = matchAttrs{}
 	for _, kvPair := range strings.Split(input, ";") {
 		parts := strings.Split(strings.TrimRight(strings.TrimLeft(kvPair, " "), " "), " ")
@@ -86,32 +87,32 @@ func parseMatchAttrs(input string) (error, matchAttrs) {
 			case "src":
 				_, localSource, err := net.ParseCIDR(value)
 				if err != nil {
-					return errors.New("unable to parse source prefix"), matchAttrs{}
+					return matchAttrs{}, errors.New("unable to parse source prefix")
 				}
 				outputMatchAttrs.Source = *localSource
 			case "dst":
 				_, localDestination, err := net.ParseCIDR(value)
 				if err != nil {
-					return errors.New("unable to parse destination prefix"), matchAttrs{}
+					return matchAttrs{}, errors.New("unable to parse destination prefix")
 				}
 				outputMatchAttrs.Destination = *localDestination
 			case "sport":
 				localSPort, err := strconv.Atoi(value)
 				if err != nil {
-					return errors.New("unable to parse source port"), matchAttrs{}
+					return matchAttrs{}, errors.New("unable to parse source port")
 				}
 				outputMatchAttrs.SourcePort = uint16(localSPort)
 			case "dport":
 				localDPort, err := strconv.Atoi(value)
 				if err != nil {
-					return errors.New("unable to parse destination port"), matchAttrs{}
+					return matchAttrs{}, errors.New("unable to parse destination port")
 				}
 				outputMatchAttrs.DestinationPort = uint16(localDPort)
 			}
 		}
 	}
 
-	return nil, outputMatchAttrs // nil error
+	return outputMatchAttrs, nil // nil error
 }
 
 // parseSessionAttrs parses the BIRD session attributes
@@ -145,12 +146,20 @@ func main() {
 		}
 	}
 
+	// Remove trailing route delimiter
+	flowRoutes = strings.TrimSuffix(flowRoutes, "|")
+
 	for _, route := range strings.Split(flowRoutes, "|") {
-		matchAttrs := inclusiveMatch(route, "{ ", " }")
-		//sessionAttrs := inclusiveMatch(route, "[", "]")
-		//fmt.Println(matchAttrs, sessionAttrs)
-		//fmt.Println(route)
-		//fmt.Println("----")
-		fmt.Printf("%+v\n", parseMatchAttrs(matchAttrs))
+		localSessionAttrs, err := parseSessionAttrs(inclusiveMatch(route, "[", "]"))
+		if err != nil {
+			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
+		}
+
+		localMatchAttrs, err := parseMatchAttrs(inclusiveMatch(route, "{ ", " }"))
+		if err != nil {
+			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
+		}
+
+		fmt.Println(localSessionAttrs, localMatchAttrs)
 	}
 }
