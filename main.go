@@ -181,6 +181,11 @@ func parseSessionAttrs(input string) (sessionAttrs, error) {
 
 func main() {
 	for _, flowRoute := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "flow") {
+		// Ignore lines that aren't a valid IPv4/IPv6 flowspec route
+		if !(strings.HasPrefix(flowRoute, "4") || strings.HasPrefix(flowRoute, "6")) {
+			continue
+		}
+
 		parts := strings.Split(flowRoute, "\n")
 
 		header := "flow" + parts[0]
