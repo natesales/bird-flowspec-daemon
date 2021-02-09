@@ -192,6 +192,8 @@ func arrayIncludes(arr []string, elem string) bool {
 }
 
 func main() {
+	log.SetLevel(log.DebugLevel)
+
 	// Get iptables object
 	iptab, err := iptables.New()
 	if err != nil {
@@ -209,6 +211,8 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	} else {
+		log.Debug("iptables chain FLOWSPEC exists")
 	}
 
 	for _, flowRoute := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "flow") {
