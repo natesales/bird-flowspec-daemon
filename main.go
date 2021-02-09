@@ -26,6 +26,13 @@ type sessionAttrs struct {
 	ImportTime      string
 }
 
+type flowspecRoute struct {
+	MatchAttrs   matchAttrs
+	SessionAttrs sessionAttrs
+	Action       int64
+	Argument     int64
+}
+
 // RFC 5575
 // 0x8006, traffic-rate, 2-byte as#, 4-byte float
 // 0x8007, traffic-action, bitmask
@@ -242,6 +249,45 @@ func main() {
 			continue
 		}
 
-		log.Printf("%+v %+v (%d %d)\n", localSessionAttrs, localMatchAttrs, action, arg)
+		route := flowspecRoute{
+			MatchAttrs:   localMatchAttrs,
+			SessionAttrs: localSessionAttrs,
+			Action:       action,
+			Argument:     arg,
+		}
+
+		// iptables rule spec
+		rule := ""
+
+		// Evaluate match parameters
+		if route.MatchAttrs.Source.IP != nil {
+			rule += " --src-ip " + route.MatchAttrs.Source.String()
+		}
+
+		if route.MatchAttrs.SourcePort != 0 {
+			rule += " --sport " + strconv.Itoa(int(route.MatchAttrs.SourcePort))
+		}
+
+		if route.MatchAttrs.Destination.IP != nil {
+			rule += " --dst-ip " + route.MatchAttrs.Destination.String()
+		}
+
+		if route.MatchAttrs.DestinationPort != 0 {
+			rule += " --dport " + strconv.Itoa(int(route.MatchAttrs.DestinationPort))
+		}
+
+		// Trim leading space
+		rule = strings.TrimLeft(rule, " ")
+
+		// Evaluate flowspec routes
+		switch route.Action {
+		case ActionTrafficRate:
+			if route.Argument == 0x0 { // Drop traffic (ratelimit to zero)
+				log.Println(rule + " -j DROP")
+
+				// Install the flowspec route into the kernel
+				//iptab.Append("filter", "FLOWSPEC", "--src " + route.MatchAttrs.Source.String() + " --jump DROP")
+			}
+		}
 	}
 }
