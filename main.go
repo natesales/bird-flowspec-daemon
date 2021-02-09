@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -24,6 +23,18 @@ type sessionAttrs struct {
 	NeighborAddress net.IP
 	ImportTime      string
 }
+
+// RFC 5575
+// 0x8006, traffic-rate, 2-byte as#, 4-byte float
+// 0x8007, traffic-action, bitmask
+// 0x8008, redirect, 6-byte Route Target
+// 0x8009, traffic-marking, DSCP value
+const (
+	ACTION_TRAFFIC_RATE    = 0x8006
+	ACTION_TRAFFIC_ACTION  = 0x8007
+	ACTION_REDIRECT        = 0x8008
+	ACTION_TRAFFIC_MARKING = 0x8009
+)
 
 // Buffered io Reader
 func bufferedRead(reader io.Reader) string {
@@ -74,6 +85,35 @@ func inclusiveMatch(input string, leftDelimiter string, rightDelimiter string) s
 	}
 
 	return strings.Split(leftSide[1], rightDelimiter)[0]
+}
+
+// parseCommunity parses a BGP community string into a flowspec action and attribute
+func parseFlowCommunity(input string) (int64, int64, error) {
+	parts := strings.Split(input, ", ")
+	if len(parts) != 3 {
+		return -1, -1, errors.New("invalid community string")
+	}
+
+	// Parse action as int
+	actionPart := strings.TrimSuffix(parts[1], "0000")
+	action, err := strconv.ParseInt(actionPart, 0, 64)
+	if err != nil {
+		return -1, -1, errors.New("invalid community string: " + err.Error())
+	}
+
+	// Validate action
+	if !(action == ACTION_TRAFFIC_RATE || action == ACTION_TRAFFIC_ACTION || action == ACTION_REDIRECT || action == ACTION_TRAFFIC_MARKING) {
+		return -1, -1, errors.New("invalid flowspec action")
+	}
+
+	// Parse argument as int
+	argPart := strings.TrimSuffix(parts[2], "0000")
+	arg, err := strconv.ParseInt(argPart, 0, 64)
+	if err != nil {
+		return -1, -1, errors.New("invalid community string: " + err.Error())
+	}
+
+	return action, arg, nil // nil error
 }
 
 func parseMatchAttrs(input string) (matchAttrs, error) {
@@ -143,19 +183,24 @@ func main() {
 		parts := strings.Split(flowRoute, "\n")
 
 		header := "flow" + parts[0]
-		fmt.Println(header)
 		localSessionAttrs, err := parseSessionAttrs(inclusiveMatch(header, "[", "]"))
 		if err != nil {
 			log.Printf("invalid flowspec route: (%s): %v\n", header, err)
+			continue
 		}
 
 		localMatchAttrs, err := parseMatchAttrs(inclusiveMatch(header, "{ ", " }"))
 		if err != nil {
 			log.Printf("invalid flowspec route: (%s): %v\n", header, err)
+			continue
 		}
 
-		log.Printf("%+v %+v\n", localSessionAttrs, localMatchAttrs)
-		community := inclusiveMatch(flowRoute, "BGP.ext_community: (", ")")
-		fmt.Println(community)
+		action, arg, err := parseFlowCommunity(inclusiveMatch(flowRoute, "BGP.ext_community: (", ")"))
+		if err != nil {
+			log.Printf("invalid flowspec route: (%s): %v\n", header, err)
+			continue
+		}
+
+		log.Printf("%+v %+v (%d %d)\n", localSessionAttrs, localMatchAttrs, action, arg)
 	}
 }
