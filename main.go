@@ -30,10 +30,10 @@ type sessionAttrs struct {
 // 0x8008, redirect, 6-byte Route Target
 // 0x8009, traffic-marking, DSCP value
 const (
-	ACTION_TRAFFIC_RATE    = 0x8006
-	ACTION_TRAFFIC_ACTION  = 0x8007
-	ACTION_REDIRECT        = 0x8008
-	ACTION_TRAFFIC_MARKING = 0x8009
+	ActionTrafficRate    = 0x8006
+	ActionTrafficAction  = 0x8007
+	ActionRedirect       = 0x8008
+	ActionTrafficMarking = 0x8009
 )
 
 // Buffered io Reader
@@ -60,6 +60,7 @@ func birdCommand(command string) string {
 	if err != nil {
 		log.Fatalf("BIRD socket connect: %v", err)
 	}
+	//goland:noinspection ALL
 	defer conn.Close()
 
 	log.Println("Connected to BIRD socket")
@@ -102,7 +103,7 @@ func parseFlowCommunity(input string) (int64, int64, error) {
 	}
 
 	// Validate action
-	if !(action == ACTION_TRAFFIC_RATE || action == ACTION_TRAFFIC_ACTION || action == ACTION_REDIRECT || action == ACTION_TRAFFIC_MARKING) {
+	if !(action == ActionTrafficRate || action == ActionTrafficAction || action == ActionRedirect || action == ActionTrafficMarking) {
 		return -1, -1, errors.New("invalid flowspec action")
 	}
 
