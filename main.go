@@ -3,10 +3,12 @@ package main
 import (
 	"errors"
 	"io"
-	"log"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/coreos/go-iptables/iptables"
+	log "github.com/sirupsen/logrus"
 )
 
 var birdSocket = "/run/bird/bird.ctl"
@@ -179,7 +181,36 @@ func parseSessionAttrs(input string) (sessionAttrs, error) {
 	return outputSessionAttrs, nil // nil error
 }
 
+// arrayIncludes runs a linear search on a string array
+func arrayIncludes(arr []string, elem string) bool {
+	for _, item := range arr {
+		if item == elem {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
+	// Get iptables object
+	iptab, err := iptables.New()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check if the flowspec filter chain exists
+	chains, err := iptab.ListChains("filter")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !arrayIncludes(chains, "FLOWSPEC") {
+		log.Debug("iptables chain FLOWSPEC doesn't exist, creating.")
+		err = iptab.NewChain("filter", "FLOWSPEC")
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	for _, flowRoute := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "flow") {
 		// Ignore lines that aren't a valid IPv4/IPv6 flowspec route
 		if !(strings.HasPrefix(flowRoute, "4") || strings.HasPrefix(flowRoute, "6")) {
