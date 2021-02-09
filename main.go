@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -138,27 +139,23 @@ func parseSessionAttrs(input string) (sessionAttrs, error) {
 }
 
 func main() {
-	flowRoutes := ""
-	for _, line := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "\n") {
-		if strings.Contains(line, "flow4") || strings.Contains(line, "flow6") {
-			flowRoutes += line + "|"
-		}
-	}
+	for _, flowRoute := range strings.Split(birdCommand("show route where (net.type = NET_FLOW4 || net.type = NET_FLOW6) all"), "flow") {
+		parts := strings.Split(flowRoute, "\n")
 
-	// Remove trailing route delimiter
-	flowRoutes = strings.TrimSuffix(flowRoutes, "|")
-
-	for _, route := range strings.Split(flowRoutes, "|") {
-		localSessionAttrs, err := parseSessionAttrs(inclusiveMatch(route, "[", "]"))
+		header := "flow" + parts[0]
+		fmt.Println(header)
+		localSessionAttrs, err := parseSessionAttrs(inclusiveMatch(header, "[", "]"))
 		if err != nil {
-			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
+			log.Printf("invalid flowspec route: (%s): %v\n", header, err)
 		}
 
-		localMatchAttrs, err := parseMatchAttrs(inclusiveMatch(route, "{ ", " }"))
+		localMatchAttrs, err := parseMatchAttrs(inclusiveMatch(header, "{ ", " }"))
 		if err != nil {
-			log.Printf("invalid flowspec route: (%s): %v\n", route, err)
+			log.Printf("invalid flowspec route: (%s): %v\n", header, err)
 		}
 
 		log.Printf("%+v %+v\n", localSessionAttrs, localMatchAttrs)
+		community := inclusiveMatch(flowRoute, "BGP.ext_community: (", ")")
+		fmt.Println(community)
 	}
 }
