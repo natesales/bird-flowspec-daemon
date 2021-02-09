@@ -283,11 +283,15 @@ func main() {
 		switch route.Action {
 		case ActionTrafficRate:
 			if route.Argument == 0x0 { // Drop traffic (ratelimit to zero)
-				log.Println(rule + " -j DROP")
-
-				// Install the flowspec route into the kernel
-				//iptab.Append("filter", "FLOWSPEC", "--src " + route.MatchAttrs.Source.String() + " --jump DROP")
+				rule += " --jump DROP"
 			}
+		}
+
+		// Install the flowspec route into the kernel
+		log.Debugf("Installing rule %s\n", rule)
+		err = iptab.Append("filter", "FLOWSPEC", rule)
+		if err != nil {
+			log.Fatal(err)
 		}
 	}
 }
