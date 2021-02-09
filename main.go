@@ -261,7 +261,7 @@ func main() {
 
 		// Evaluate match parameters
 		if route.MatchAttrs.Source.IP != nil {
-			rule += " --src-ip " + route.MatchAttrs.Source.String()
+			rule += " --src " + route.MatchAttrs.Source.String()
 		}
 
 		if route.MatchAttrs.SourcePort != 0 {
@@ -269,7 +269,7 @@ func main() {
 		}
 
 		if route.MatchAttrs.Destination.IP != nil {
-			rule += " --dst-ip " + route.MatchAttrs.Destination.String()
+			rule += " --dst " + route.MatchAttrs.Destination.String()
 		}
 
 		if route.MatchAttrs.DestinationPort != 0 {
